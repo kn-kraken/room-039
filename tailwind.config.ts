@@ -6,7 +6,12 @@ export default {
 	theme: {
 		extend: {
 			colors: {
-				primary: '#ea9f08'
+				graphite: '#3c3c4c',
+				sapphire: '#7896cf',
+				heather: '#b4a0aa'
+			},
+			fontFamily: {
+				'radikal-wut': ['radikal-wut-bold']
 			}
 		}
 	},

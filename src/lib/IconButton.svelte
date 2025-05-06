@@ -4,14 +4,12 @@
 	let { icon, style, ...rest }: { icon: string } & HTMLButtonAttributes = $props();
 </script>
 
-<button {...rest} style="background-image: url({icon}); {style}"></button>
+<button {...rest} style="mask-image: url({icon}); {style}"></button>
 
 <style>
 	button {
-		width: 24px;
-		height: 24px;
-		background-size: contain;
-		background-repeat: no-repeat;
-		background-position: center;
+		mask-size: contain;
+		mask-repeat: no-repeat;
+		mask-position: center;
 	}
 </style>

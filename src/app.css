@@ -5,4 +5,17 @@
 html,
 body {
 	height: 100%;
+	font-family: 'source-sans-pro', sans-serif;
+}
+
+@font-face {
+	font-family: 'radikal-wut-bold';
+	src: url('./assets/radikalwut-bold.woff');
+	font-weight: normal;
+	font-style: normal;
+}
+
+@font-face {
+	font-family: 'source-sans-pro';
+	src: url('./assets/SourceSans3-VariableFont_wght.ttf');
 }
