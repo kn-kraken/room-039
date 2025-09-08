@@ -1,10 +1,19 @@
 import { redirect, type RequestEvent } from '@sveltejs/kit';
 import * as crypto from 'crypto';
+import { CONSUMER_KEY, CONSUMER_SECRET } from '$env/static/private';
 
 const sessions: { [key: string]: Session } = {};
 
 export async function auth(event: RequestEvent): Promise<LoggedIn> {
 	return authInStage(event, 'logged-in');
+}
+
+export function setUserAcceptedTerms({ cookies }: RequestEvent) {
+	const id = cookies.get('session_id')!;
+	const session = sessions[id];
+	if (session && session.kind === 'logged-in') {
+		session.userData.hasAcceptedTerms = true;
+	}
 }
 
 export async function authInStage<Stage extends 'logging-in' | 'logged-in'>(
@@ -23,8 +32,8 @@ export async function authInStage<Stage extends 'logging-in' | 'logged-in'>(
 		).then((res) => res.text());
 
 		const res = new Map(text.split('&').map((s) => s.split('=') as [string, string]));
-
 		const tokenSecret = res.get('oauth_token_secret')!;
+
 		const sessionId = crypto.randomUUID();
 		sessions[sessionId] = { tokenSecret, kind: 'logging-in' };
 
@@ -45,7 +54,8 @@ export async function authInStage<Stage extends 'logging-in' | 'logged-in'>(
 
 export function setUserData({ cookies }: RequestEvent, userData: any) {
 	const id = cookies.get('session_id')!;
-	sessions[id]! = { kind: 'logged-in', userData };
+	const hasAcceptedTerms = userData.hasAcceptedTerms ?? false;
+	sessions[id]! = { kind: 'logged-in', userData: { ...userData, hasAcceptedTerms } };
 }
 
 function percentEscape(str: string) {
@@ -77,7 +87,7 @@ function getAuthHeader(
 
 	const baseString = pc`${method}&${url}&${encoded}`;
 
-	let hmac = crypto.createHmac('sha1', pc`${process.env.CONSUMER_SECRET!}&${secret}`);
+	let hmac = crypto.createHmac('sha1', pc`${CONSUMER_SECRET!}&${secret}`);
 
 	hmac.update(baseString);
 	const signature = percentEscape(hmac.digest('base64'));
@@ -94,7 +104,7 @@ export function oauthFetch(
 	params: Record<string, string>
 ) {
 	const oauthParams = {
-		oauth_consumer_key: process.env.CONSUMER_KEY as string,
+		oauth_consumer_key: CONSUMER_KEY,
 		oauth_nonce: crypto.randomBytes(16).toString('base64'),
 		oauth_signature_method: 'HMAC-SHA1',
 		oauth_timestamp: (Date.now() / 1000).toFixed(0),
@@ -120,6 +130,7 @@ type LoggedIn = {
 	userData: {
 		id: number;
 		name: string;
+		hasAcceptedTerms: boolean;
 	};
 };
 
