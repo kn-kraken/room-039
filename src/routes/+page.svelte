@@ -20,6 +20,7 @@
 
 	async function handleAcceptTerms() {
 		const formData = new FormData();
+		formData.append('id', userData.id.toString());
 		const response = await fetch('?/acceptTerms', {
 			method: 'POST',
 			body: formData

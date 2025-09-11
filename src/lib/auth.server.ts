@@ -52,7 +52,10 @@ export async function authInStage<Stage extends 'logging-in' | 'logged-in'>(
 	return sessions[id] as Session & { kind: Stage };
 }
 
-export function setUserData({ cookies }: RequestEvent, userData: any) {
+export function setUserData(
+	{ cookies }: RequestEvent,
+	userData: { id: number; name: string; hasAcceptedTerms?: boolean }
+) {
 	const id = cookies.get('session_id')!;
 	const hasAcceptedTerms = userData.hasAcceptedTerms ?? false;
 	sessions[id]! = { kind: 'logged-in', userData: { ...userData, hasAcceptedTerms } };
