@@ -68,3 +68,43 @@ const insertSection = db.prepare(`
 insertSection.run('Section A', 'Left side of Room 39');
 insertSection.run('Section B', 'Center of Room 39');
 insertSection.run('Section C', 'Right side of Room 39');
+
+// Insert sample users
+const insertUser = db.prepare(`
+  INSERT OR IGNORE INTO users (id, firstname, surname, user_type, accepted_terms)
+  VALUES (?, ?, ?, ?, ?)
+`);
+
+insertUser.run(1, 'Jan', 'Kowalski', 'student', 1);
+insertUser.run(2, 'Dr. Anna', 'Nowak', 'supervisor', 1);
+insertUser.run(3, 'Maria', 'Wiśniewska', 'student', 1);
+insertUser.run(4, 'Prof. Piotr', 'Zieliński', 'supervisor', 1);
+
+// Insert sample reservations for today and tomorrow
+const today = new Date().toISOString().split('T')[0];
+const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+const insertReservation = db.prepare(`
+  INSERT OR IGNORE INTO reservations (user_id, section_id, date, start_time, end_time, status, supervisor_id, notes)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+`);
+
+// Today's reservations
+insertReservation.run(
+	1,
+	1,
+	today,
+	'09:00',
+	'11:00',
+	'confirmed',
+	2,
+	'Working on electronics project'
+);
+insertReservation.run(3, 2, today, '14:00', '16:00', 'pending', null, 'Programming session');
+insertReservation.run(1, 3, today, '10:30', '12:00', 'confirmed', 4, 'Research work');
+
+// Tomorrow's reservations
+insertReservation.run(3, 1, tomorrow, '08:00', '10:00', 'confirmed', 2, 'Lab experiment');
+insertReservation.run(1, 2, tomorrow, '13:00', '15:00', 'pending', null, 'Project development');
+
+console.log('Database initialized with sample data');
