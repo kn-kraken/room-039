@@ -31,6 +31,14 @@ export interface Section {
 	id: number;
 	section_name: string;
 	description: string;
+	instructions: string;
+	created_at: string;
+}
+
+export interface Project {
+	id: number;
+	name: string;
+	emoji: string | null;
 	created_at: string;
 }
 
@@ -38,6 +46,7 @@ export interface Reservation {
 	id: number;
 	user_id: number;
 	section_id: number;
+	project_id: number;
 	date: string; // Format: 'YYYY-MM-DD'
 	start_time: string; // Format: 'HH:MM'
 	end_time: string; // Format: 'HH:MM'
@@ -60,6 +69,8 @@ export interface ReservationWithDetails extends Reservation {
 	firstname: string;
 	surname: string;
 	section_name: string;
+	project_name: string;
+	project_emoji: string | null;
 	supervisor_firstname: string | null;
 	supervisor_surname: string | null;
 }
@@ -100,10 +111,19 @@ export const queries = {
     SELECT * FROM sections WHERE id = ?
   `),
 
+	// Project operations
+	getAllProjects: db.prepare(`
+    SELECT * FROM projects ORDER BY name
+  `),
+
+	getProjectById: db.prepare(`
+    SELECT * FROM projects WHERE id = ?
+  `),
+
 	// Reservation operations
 	createReservation: db.prepare(`
-    INSERT INTO reservations (user_id, section_id, date, start_time, end_time, status, notes)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO reservations (user_id, section_id, project_id, date, start_time, end_time, status, notes)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `),
 
 	getReservationById: db.prepare(`
@@ -116,11 +136,14 @@ export const queries = {
       u.firstname,
       u.surname,
       s.section_name,
+      p.name as project_name,
+      p.emoji as project_emoji,
       sup.firstname as supervisor_firstname,
       sup.surname as supervisor_surname
     FROM reservations r
     JOIN users u ON r.user_id = u.id
     JOIN sections s ON r.section_id = s.id
+    JOIN projects p ON r.project_id = p.id
     LEFT JOIN users sup ON r.supervisor_id = sup.id
     WHERE r.date = ?
     ORDER BY r.start_time
@@ -289,6 +312,7 @@ export const dbHelpers = {
 	makeReservation(
 		userId: number,
 		sectionId: number,
+		projectId: number,
 		date: string,
 		startTime: string,
 		endTime: string,
@@ -318,6 +342,7 @@ export const dbHelpers = {
 		const result = queries.createReservation.run(
 			userId,
 			sectionId,
+			projectId,
 			date,
 			startTime,
 			endTime,

@@ -5,10 +5,11 @@
 	import IconButton from '$lib/IconButton.svelte';
 	import TocDialog from '$lib/components/toc-dialog.svelte';
 	import ReservationDialog from '$lib/components/reservation-dailog.svelte';
-	import type { ReservationWithDetails } from '$lib/db/index.js';
+	import type { ReservationWithDetails, Section } from '$lib/db/index.js';
 
 	let { data } = $props();
-	const { userData, todayReservations, monthlyReservations } = data;
+	const { userData, todayReservations, monthlyReservations, sections } = data;
+	const typedSections = sections as Section[];
 	console.log(todayReservations);
 
 	let openToC = $state(false);
@@ -113,14 +114,16 @@
 			// Get reservations for this day from monthly data
 			const dayReservations = monthlyReservations[dateString] || [];
 
-			// Count reservations by section
-			let sectionCounts = { 'Section A': 0, 'Section B': 0, 'Section C': 0 };
+			// Count reservations by section - dynamic based on database sections
+			let sectionCounts: Record<string, number> = {};
+			typedSections.forEach((section) => {
+				sectionCounts[section.section_name] = 0;
+			});
 			let hasReservations = dayReservations.length > 0;
 
 			dayReservations.forEach((res) => {
-				const sectionName = res.section_name as keyof typeof sectionCounts;
-				if (sectionCounts[sectionName] !== undefined) {
-					sectionCounts[sectionName]++;
+				if (sectionCounts[res.section_name] !== undefined) {
+					sectionCounts[res.section_name]++;
 				}
 			});
 
@@ -138,17 +141,24 @@
 
 	const weekDays = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nd'];
 
-	// Define section colors
+	// Define section colors - dynamic based on sections
+	const colorSchemes = [
+		{ bg: 'bg-blue-400', border: 'border-blue-400' },
+		{ bg: 'bg-green-400', border: 'border-green-400' },
+		{ bg: 'bg-purple-400', border: 'border-purple-400' },
+		{ bg: 'bg-orange-400', border: 'border-orange-400' },
+		{ bg: 'bg-pink-400', border: 'border-pink-400' }
+	];
+
 	function getSectionColor(sectionName: string, type: 'bg' | 'border' = 'bg') {
-		const colors = {
-			'Section A': type === 'bg' ? 'bg-blue-400' : 'border-blue-400',
-			'Section B': type === 'bg' ? 'bg-green-400' : 'border-green-400',
-			'Section C': type === 'bg' ? 'bg-purple-400' : 'border-purple-400'
-		};
-		return (
-			colors[sectionName as keyof typeof colors] ||
-			(type === 'bg' ? 'bg-gray-400' : 'border-gray-400')
-		);
+		const sectionIndex = typedSections.findIndex((s) => s.section_name === sectionName);
+		const colorScheme = colorSchemes[sectionIndex % colorSchemes.length];
+
+		if (!colorScheme) {
+			return type === 'bg' ? 'bg-gray-400' : 'border-gray-400';
+		}
+
+		return type === 'bg' ? colorScheme.bg : colorScheme.border;
 	}
 
 	function formatTime(time: string) {
@@ -203,24 +213,18 @@
 						<!-- Section indicators -->
 						{#if dayInfo.hasReservations}
 							<div class="absolute top-1 right-1 flex flex-col gap-0.5">
-								{#if dayInfo.sectionCounts['Section A'] > 0}
-									<div
-										class="h-1.5 w-1.5 rounded-full bg-blue-500"
-										title="Section A: {dayInfo.sectionCounts['Section A']} rezerwacji"
-									></div>
-								{/if}
-								{#if dayInfo.sectionCounts['Section B'] > 0}
-									<div
-										class="h-1.5 w-1.5 rounded-full bg-green-500"
-										title="Section B: {dayInfo.sectionCounts['Section B']} rezerwacji"
-									></div>
-								{/if}
-								{#if dayInfo.sectionCounts['Section C'] > 0}
-									<div
-										class="h-1.5 w-1.5 rounded-full bg-purple-500"
-										title="Section C: {dayInfo.sectionCounts['Section C']} rezerwacji"
-									></div>
-								{/if}
+								{#each typedSections as section}
+									{#if dayInfo.sectionCounts[section.section_name] > 0}
+										<div
+											class="h-1.5 w-1.5 rounded-full {getSectionColor(section.section_name, 'bg')
+												.replace('bg-', 'bg-')
+												.replace('-400', '-500')}"
+											title="{section.section_name}: {dayInfo.sectionCounts[
+												section.section_name
+											]} rezerwacji"
+										></div>
+									{/if}
+								{/each}
 							</div>
 						{/if}
 
@@ -257,18 +261,16 @@
 		<div class="self-center rounded-md bg-white p-3 shadow-sm">
 			<h3 class="mb-2 text-sm font-semibold text-gray-700">Legenda sekcji:</h3>
 			<div class="flex justify-center gap-4 text-sm">
-				<div class="flex items-center gap-1">
-					<div class="h-3 w-3 rounded-full bg-blue-500"></div>
-					<span class="text-gray-700">Section A - Elektronika</span>
-				</div>
-				<div class="flex items-center gap-1">
-					<div class="h-3 w-3 rounded-full bg-green-500"></div>
-					<span class="text-gray-700">Section B - Programowanie</span>
-				</div>
-				<div class="flex items-center gap-1">
-					<div class="h-3 w-3 rounded-full bg-purple-500"></div>
-					<span class="text-gray-700">Section C - Badania</span>
-				</div>
+				{#each typedSections as section, index}
+					<div class="flex items-center gap-1">
+						<div
+							class="h-3 w-3 rounded-full {getSectionColor(section.section_name, 'bg')
+								.replace('bg-', 'bg-')
+								.replace('-400', '-500')}"
+						></div>
+						<span class="text-gray-700">{section.section_name} - {section.description}</span>
+					</div>
+				{/each}
 			</div>
 		</div>
 
@@ -309,12 +311,16 @@
 								reservation.section_name,
 								'border'
 							)} flex items-center px-2 text-xs font-medium text-white"
-							title="{reservation.section_name}: {reservation.firstname} {reservation.surname} - {reservation.notes ||
-								'Brak notatek'}"
+							title="{reservation.section_name}: {reservation.firstname} {reservation.surname}{reservation.project_name
+								? ` - ${reservation.project_emoji || ''}${reservation.project_name}`
+								: ''} - {reservation.notes || 'Brak notatek'}"
 						>
 							<span class="truncate">
 								{reservation.section_name.split(' ')[1]} - {reservation.firstname}
 								{reservation.surname}
+								{#if reservation.project_emoji}
+									<span class="ml-1">{reservation.project_emoji}</span>
+								{/if}
 								{#if reservation.notes}
 									({reservation.notes})
 								{/if}
