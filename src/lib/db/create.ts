@@ -24,8 +24,20 @@ db.run(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     section_name TEXT NOT NULL UNIQUE,
     description TEXT,
+    instructions TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+
+  -- Projects table
+  CREATE TABLE IF NOT EXISTS projects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    emoji TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+`);
+
+db.run(`
 
   -- Supervisor availability table
   CREATE TABLE IF NOT EXISTS supervisor_availability (
@@ -43,6 +55,7 @@ db.run(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     section_id INTEGER NOT NULL,
+    project_id INTEGER NOT NULL DEFAULT 1,
     date DATE NOT NULL,
     start_time TIME NOT NULL,
     end_time TIME NOT NULL,
@@ -53,6 +66,7 @@ db.run(`
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (section_id) REFERENCES sections(id),
+    FOREIGN KEY (project_id) REFERENCES projects(id),
     FOREIGN KEY (supervisor_id) REFERENCES users(id),
     -- Prevent double booking of same section at same time
     UNIQUE(section_id, date, start_time, end_time)
@@ -61,13 +75,35 @@ db.run(`
 
 // Insert default sections for Room 39
 const insertSection = db.prepare(`
-  INSERT OR IGNORE INTO sections (section_name, description)
+  INSERT OR IGNORE INTO sections (section_name, description, instructions)
+  VALUES (?, ?, ?)
+`);
+
+insertSection.run(
+	'Boks 1',
+	'Pierwszy boks od lewej',
+	'• Pierwszy boks od lewej\n• Idealny do spotkań oraz pracy zespołowej w grupach 2-4\n• Pozwala w spokoju i ciszy prowadzić badania'
+);
+insertSection.run(
+	'Boks 2',
+	'Drugi boks od lewej',
+	'• Drugi boks od lewej\n• Idealny do spotkań oraz pracy zespołowej w grupach 2-4\n• Pozwala w spokoju i ciszy prowadzić badania'
+);
+insertSection.run(
+	'Gniazdo',
+	'Umiejscowiony na parterze',
+	'• Umiejscowiony na parterze\n• Idealny na spotkania w większym gronie\n• Posiada dotykowy ekran pozwalający na wizualizację zagadnień i prowadzenie prezentacji'
+);
+
+// Insert default projects
+const insertProject = db.prepare(`
+  INSERT OR IGNORE INTO projects (name, emoji)
   VALUES (?, ?)
 `);
 
-insertSection.run('Section A', 'Left side of Room 39');
-insertSection.run('Section B', 'Center of Room 39');
-insertSection.run('Section C', 'Right side of Room 39');
+insertProject.run('Kraken', '🐙');
+insertProject.run('Design Factory', '🏭');
+insertProject.run('Inne', '📝');
 
 // Insert sample users
 const insertUser = db.prepare(`
@@ -101,7 +137,7 @@ insertReservation.run(
 	'Working on electronics project'
 );
 insertReservation.run(3, 2, today, '14:00', '16:00', 'pending', null, 'Programming session');
-insertReservation.run(1, 3, today, '10:30', '12:00', 'confirmed', 4, 'Research work');
+// insertReservation.run(1, 3, today, '10:30', '12:00', 'confirmed', 4, 'Research work');
 
 // Tomorrow's reservations
 insertReservation.run(3, 1, tomorrow, '08:00', '10:00', 'confirmed', 2, 'Lab experiment');

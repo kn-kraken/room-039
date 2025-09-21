@@ -33,10 +33,14 @@ export const load = (async (event) => {
 	console.log(monthlyReservations);
 	const todayReservations = monthlyReservations[today] || [];
 
+	// Get all sections
+	const sections = queries.getAllSections.all();
+
 	return {
 		userData: session.userData,
 		todayReservations,
-		monthlyReservations
+		monthlyReservations,
+		sections
 	};
 }) satisfies PageServerLoad;
 
@@ -80,14 +84,23 @@ export const actions = {
 			const formData = await event.request.formData();
 
 			const sectionId = parseInt(formData.get('section_id') as string);
+			const projectId = parseInt(formData.get('project_id') as string);
 			const date = formData.get('date') as string;
 			const startTime = formData.get('start_time') as string;
 			const endTime = formData.get('end_time') as string;
 			const notes = (formData.get('notes') as string) || '';
 
 			// Validate required fields
-			if (!sectionId || !date || !startTime || !endTime) {
+			if (!sectionId || !projectId || !date || !startTime || !endTime) {
 				return fail(400, { error: 'Wszystkie pola są wymagane' });
+			}
+
+			// Get project details to check if it's "Inne"
+			const project = queries.getProjectById.get(projectId) as
+				| { id: number; name: string; emoji: string | null }
+				| undefined;
+			if (project && project.name === 'Inne' && !notes.trim()) {
+				return fail(400, { error: 'Dla projektu "Inne" notatka jest wymagana' });
 			}
 
 			// Validate time range
@@ -99,12 +112,12 @@ export const actions = {
 			const result = dbHelpers.makeReservation(
 				session.userData.id,
 				sectionId,
+				projectId,
 				date,
 				startTime,
 				endTime,
 				notes
 			);
-
 			console.log('Reservation created:', result);
 
 			return {
