@@ -4,10 +4,7 @@ import type { PageServerLoad, Actions } from './$types';
 import { queries, dbHelpers } from '$lib/db';
 import type { ReservationWithDetails } from '$lib/db';
 
-export const load = (async (event) => {
-	const session = await auth(event);
-	console.log(session);
-
+export const load = (async () => {
 	// Get current month's date range
 	const now = new Date();
 	const start = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -37,7 +34,6 @@ export const load = (async (event) => {
 	const sections = queries.getAllSections.all();
 
 	return {
-		userData: session.userData,
 		todayReservations,
 		monthlyReservations,
 		sections

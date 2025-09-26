@@ -1,5 +1,6 @@
 import { setUserAcceptedTerms } from '$lib/auth.server';
 import { Database } from 'bun:sqlite';
+import { run } from 'node:test';
 
 // Create/open database
 const db = new Database('src/lib/db/room39.db');
@@ -8,12 +9,12 @@ db.run('PRAGMA log_queries = ON');
 const originalRun = db.run;
 const originalPrepare = db.prepare;
 
-db.run = function (sql: string): any {
+db.run = function(sql: string): any {
 	console.log('🔍 DB RUN:', sql);
 	return originalRun.call(this, sql);
 };
 
-db.prepare = function (sql: string): any {
+db.prepare = function(sql: string): any {
 	console.log('🔍 DB PREPARE:', sql);
 	return originalPrepare.call(this, sql);
 };
@@ -114,6 +115,11 @@ export const queries = {
 	// Project operations
 	getAllProjects: db.prepare(`
     SELECT * FROM projects ORDER BY name
+  `),
+
+	createProject: db.prepare(`
+    INSERT INTO projects (name, emoji)
+    VALUES (?, ?)
   `),
 
 	getProjectById: db.prepare(`
@@ -243,6 +249,10 @@ export const queries = {
     WHERE id = ?
   `)
 };
+type PendingReservation = Reservation & {
+	firstname: string; surname: string;
+};
+
 
 // Helper functions with proper typing
 export const dbHelpers = {
@@ -363,6 +373,19 @@ export const dbHelpers = {
 		return allReservations.filter((r) => r.section_id === sectionId && r.status !== 'cancelled');
 	},
 
+
+	getPendingReservations(): PendingReservation[] {
+		return queries.getPendingReservations.all() as PendingReservation[];
+	},
+
+	confirmReservation(userId: number, reservationId: number) {
+		queries.confirmReservation.run(userId, reservationId);
+	},
+
+	cancelReservation(reservationId: number) {
+		queries.cancelReservation.run(reservationId);
+	},
+
 	// Get user by ID with type safety
 	getUser(userId: number): User | null {
 		const user = queries.getUserById.get(userId) as User | undefined;
@@ -373,6 +396,14 @@ export const dbHelpers = {
 	getSection(sectionId: number): Section | null {
 		const section = queries.getSectionById.get(sectionId) as Section | undefined;
 		return section || null;
+	},
+
+	getAllProjects(): Project[] {
+		return queries.getAllProjects.all() as Project[];
+	},
+
+	addProject(name: string, emoji: string)  {
+		queries.createProject.run(name, emoji);
 	}
 };
 

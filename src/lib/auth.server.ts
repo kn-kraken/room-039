@@ -1,4 +1,4 @@
-import { redirect, type RequestEvent } from '@sveltejs/kit';
+import { error, redirect, type RequestEvent } from '@sveltejs/kit';
 import * as crypto from 'crypto';
 import { CONSUMER_KEY, CONSUMER_SECRET } from '$env/static/private';
 
@@ -6,6 +6,15 @@ const sessions: { [key: string]: Session } = {};
 
 export async function auth(event: RequestEvent): Promise<LoggedIn> {
 	return authInStage(event, 'logged-in');
+}
+
+export async function authAdmin(event: RequestEvent): Promise<LoggedIn> {
+	const session = await auth(event);
+	if (!session.userData.isAdmin) {
+		throw error(403, "not admin");
+	}
+
+	return session;
 }
 
 export function setUserAcceptedTerms({ cookies }: RequestEvent) {
@@ -54,7 +63,7 @@ export async function authInStage<Stage extends 'logging-in' | 'logged-in'>(
 
 export function setUserData(
 	{ cookies }: RequestEvent,
-	userData: { id: number; name: string; hasAcceptedTerms?: boolean }
+	userData: { id: number; name: string; hasAcceptedTerms?: boolean, isAdmin: boolean }
 ) {
 	const id = cookies.get('session_id')!;
 	const hasAcceptedTerms = userData.hasAcceptedTerms ?? false;
@@ -133,6 +142,7 @@ type LoggedIn = {
 	userData: {
 		id: number;
 		name: string;
+		isAdmin: boolean;
 		hasAcceptedTerms: boolean;
 	};
 };

@@ -46,6 +46,7 @@ export const GET = (async (event) => {
 	setUserData(event, {
 		id: userData.id,
 		name: userData.first_name + ' ' + userData.last_name,
+		isAdmin: existingUser?.user_type === "supervisor",
 		hasAcceptedTerms: existingUser?.accepted_terms ?? false
 	});
 
